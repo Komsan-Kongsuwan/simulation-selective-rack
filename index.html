@@ -158,6 +158,14 @@
             border-bottom: 3px solid #667eea;
         }
 
+        .tab.empty-tab {
+            color: #999;
+        }
+
+        .tab.empty-tab.active {
+            color: #999;
+        }
+
         .main-content {
             display: flex;
             flex: 1;
@@ -217,6 +225,47 @@
         .sidebar-content {
             padding: 12px;
             overflow-y: auto;
+            flex: 1;
+        }
+
+        .filter-section {
+            margin-bottom: 20px;
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .filter-section h4 {
+            font-size: 0.9em;
+            color: #2a5298;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .aging-option {
+            display: flex;
+            align-items: center;
+            padding: 6px 8px;
+            margin-bottom: 4px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .aging-option:hover {
+            background: #e9ecef;
+        }
+
+        .aging-option input[type="radio"] {
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        .aging-option label {
+            cursor: pointer;
+            font-size: 0.9em;
             flex: 1;
         }
 
@@ -333,6 +382,141 @@
             font-weight: 600;
         }
 
+        .chart-container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            max-width: 1200px;
+            margin: 30px auto 0;
+        }
+
+        .chart-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        #customerChart {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .chart-bar-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .chart-bar-item:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        .chart-bar-label {
+            width: 200px;
+            min-width: 200px;
+            font-size: 0.9em;
+            color: #495057;
+            font-weight: 500;
+            padding-right: 15px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .chart-bar-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chart-bar-bg {
+            flex: 1;
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .chart-bar-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+        }
+
+        .chart-bar-percentage {
+            color: white;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .chart-bar-count {
+            min-width: 60px;
+            text-align: right;
+            font-size: 0.9em;
+            color: #495057;
+            font-weight: 600;
+        }
+
+        .chart-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            gap: 15px;
+        }
+
+        .chart-label {
+            min-width: 150px;
+            font-weight: 600;
+            color: #495057;
+            text-align: right;
+            font-size: 0.95em;
+        }
+
+        .chart-bar-container {
+            flex: 1;
+            background: #e9ecef;
+            border-radius: 8px;
+            height: 35px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chart-bar {
+            height: 100%;
+            border-radius: 8px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9em;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .chart-percentage {
+            min-width: 60px;
+            text-align: right;
+            font-weight: 600;
+            color: #667eea;
+            font-size: 0.95em;
+        }
+
         .zone-content {
             display: none;
         }
@@ -391,6 +575,10 @@
         .rack-cell.empty {
             background: #e9ecef;
             border-style: dashed;
+        }
+
+        .rack-cell.empty .cell-location {
+            color: #adb5bd;
         }
 
         .rack-cell.occupied {
@@ -709,10 +897,38 @@
             <div class="sidebar" id="sidebar">
                 <button class="sidebar-toggle-btn" id="sidebarToggle" onclick="toggleSidebar()">Hide</button>
                 <div class="sidebar-header">
-                    <h3>Filter by Customer</h3>
+                    <h3>Filters</h3>
                 </div>
-                <div class="sidebar-content" id="customerList">
-                    <!-- Customer list will be populated here -->
+                <div class="sidebar-content">
+                    <div class="filter-section">
+                        <h4>Stock Aging</h4>
+                        <div class="aging-option">
+                            <input type="radio" id="agingAll" name="agingFilter" checked onchange="applyFilter()">
+                            <label for="agingAll">All</label>
+                        </div>
+                        <div class="aging-option">
+                            <input type="radio" id="aging6months" name="agingFilter" onchange="applyFilter()">
+                            <label for="aging6months">≤ 6 months (0-6 months)</label>
+                        </div>
+                        <div class="aging-option">
+                            <input type="radio" id="aging1year" name="agingFilter" onchange="applyFilter()">
+                            <label for="aging1year">> 6 months</label>
+                        </div>
+                        <div class="aging-option">
+                            <input type="radio" id="aging2years" name="agingFilter" onchange="applyFilter()">
+                            <label for="aging2years">> 1 year</label>
+                        </div>
+                        <div class="aging-option">
+                            <input type="radio" id="agingOver2years" name="agingFilter" onchange="applyFilter()">
+                            <label for="agingOver2years">> 2 years</label>
+                        </div>
+                    </div>
+                    <div class="filter-section">
+                        <h4>Customer</h4>
+                        <div id="customerList">
+                            <!-- Customer list will be populated here -->
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -736,6 +952,11 @@
                             <span class="number" id="occupancyRate">-</span>
                             <span class="label">Occupancy Rate</span>
                         </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <div class="chart-title">Customer Location Occupation</div>
+                        <div id="customerChart"></div>
                     </div>
                 </div>
             </div>
@@ -764,9 +985,29 @@ const RACK_DATA = {"zones":{"A":{"matrix":[[{"location":"A-1-1","occupied":false
         let customerCounts = {};
         let sidebarVisible = true;
         let currentMainTab = 'rack';
+        let latestDate = null;
+
+        // Helper function to parse DD/MM/YYYY dates
+        function parseDDMMYYYY(dateString) {
+            if (!dateString) return null;
+            const parts = dateString.split('/');
+            if (parts.length !== 3) return null;
+            // parts[0] = day, parts[1] = month, parts[2] = year
+            // JavaScript Date months are 0-indexed, so subtract 1 from month
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1;
+            const year = parseInt(parts[2], 10);
+            const date = new Date(year, month, day);
+            // Validate the date
+            if (isNaN(date.getTime())) return null;
+            return date;
+        }
 
         function loadData() {
             try {
+                // Find the latest date in all items
+                latestDate = null;
+                
                 for (const [zoneName, zoneData] of Object.entries(RACK_DATA.zones)) {
                     for (const row of zoneData.matrix) {
                         for (const cell of row) {
@@ -776,12 +1017,22 @@ const RACK_DATA = {"zones":{"A":{"matrix":[[{"location":"A-1-1","occupied":false
                                         allCustomers.add(item.ownerName);
                                         customerCounts[item.ownerName] = (customerCounts[item.ownerName] || 0) + 1;
                                     }
+                                    
+                                    // Find the latest date
+                                    if (item.lot6) {
+                                        const itemDate = parseDDMMYYYY(item.lot6);
+                                        if (itemDate && (!latestDate || itemDate > latestDate)) {
+                                            latestDate = itemDate;
+                                        }
+                                    }
                                 });
                             }
                         }
                     }
                 }
 
+                console.log('Latest date found in data:', latestDate);
+                
                 populateCustomerList();
                 displayTabs();
                 updateStats();
@@ -869,9 +1120,88 @@ const RACK_DATA = {"zones":{"A":{"matrix":[[{"location":"A-1-1","occupied":false
         }
 
         function applyCustomerFilter() {
-            const showAll = selectedCustomers.size === 0;
+            applyFilter();
+        }
+
+        function getStockAgeInMonths(lot6Date) {
+            if (!lot6Date || !latestDate) return null;
+            
+            // Parse the date string using DD/MM/YYYY format
+            const itemDate = parseDDMMYYYY(lot6Date);
+            if (!itemDate) return null;
+            
+            // Calculate difference in months from the latest date
+            const monthsDiff = (latestDate.getFullYear() - itemDate.getFullYear()) * 12 + 
+                              (latestDate.getMonth() - itemDate.getMonth());
+            
+            return monthsDiff;
+        }
+
+        function matchesAgingFilter(item) {
+            // Get selected aging filter
+            const agingAll = document.getElementById('agingAll')?.checked || false;
+            const aging6months = document.getElementById('aging6months')?.checked || false;
+            const aging1year = document.getElementById('aging1year')?.checked || false;
+            const aging2years = document.getElementById('aging2years')?.checked || false;
+            const agingOver2years = document.getElementById('agingOver2years')?.checked || false;
+            
+            console.log(`[matchesAgingFilter] Radio states - All:${agingAll}, ≤6m:${aging6months}, >6m:${aging1year}, >1y:${aging2years}, >2y:${agingOver2years}`);
+            
+            // If "All" is selected, show everything
+            if (agingAll) {
+                return true;
+            }
+            
+            const ageInMonths = getStockAgeInMonths(item.lot6);
+            
+            console.log(`Item ${item.itemCode} - lot6: ${item.lot6}, ageInMonths: ${ageInMonths}, latestDate: ${latestDate}`);
+            
+            // If no valid date, don't filter it out (show it)
+            if (ageInMonths === null) {
+                console.log(`  -> Showing (no valid date)`);
+                return true;
+            }
+            
+            // Cumulative aging filters
+            if (aging6months) {
+                // Show items 0-6 months old
+                const matches = ageInMonths <= 6;
+                console.log(`  -> ≤6 months filter: ${matches} (age: ${ageInMonths})`);
+                return matches;
+            }
+            if (aging1year) {
+                // Show items older than 6 months (includes > 1 year and > 2 years)
+                const matches = ageInMonths > 6;
+                console.log(`  -> >6 months filter: ${matches} (age: ${ageInMonths})`);
+                return matches;
+            }
+            if (aging2years) {
+                // Show items older than 1 year (includes > 2 years)
+                const matches = ageInMonths > 12;
+                console.log(`  -> >1 year filter: ${matches} (age: ${ageInMonths})`);
+                return matches;
+            }
+            if (agingOver2years) {
+                // Show items older than 2 years
+                const matches = ageInMonths > 24;
+                console.log(`  -> >2 years filter: ${matches} (age: ${ageInMonths})`);
+                return matches;
+            }
+            
+            console.log(`  -> NO FILTER MATCHED - returning false`);
+            return false;
+        }
+
+        function applyFilter() {
+            console.log('=== applyFilter called ===');
+            const showAllCustomers = selectedCustomers.size === 0;
+            console.log('Show all customers:', showAllCustomers);
+            
+            let totalCells = 0;
+            let filteredOutCells = 0;
             
             allCells.forEach((cell, location) => {
+                totalCells++;
                 const cellData = findCellData(location);
                 
                 if (!cellData || !cellData.occupied) {
@@ -879,20 +1209,32 @@ const RACK_DATA = {"zones":{"A":{"matrix":[[{"location":"A-1-1","occupied":false
                     return;
                 }
                 
-                if (showAll) {
+                // Check if any item in the cell matches both filters
+                const hasMatchingItem = cellData.items.some(item => {
+                    // Check customer filter
+                    const matchesCustomer = showAllCustomers || selectedCustomers.has(item.ownerName);
+                    
+                    // Check aging filter
+                    const matchesAging = matchesAgingFilter(item);
+                    
+                    console.log(`  Location ${location}: customer=${matchesCustomer}, aging=${matchesAging}, both=${matchesCustomer && matchesAging}`);
+                    
+                    // Item must match both filters
+                    return matchesCustomer && matchesAging;
+                });
+                
+                if (hasMatchingItem) {
                     cell.classList.remove('filtered-out');
                 } else {
-                    const hasMatchingCustomer = cellData.items.some(item => 
-                        selectedCustomers.has(item.ownerName)
-                    );
-                    
-                    if (hasMatchingCustomer) {
-                        cell.classList.remove('filtered-out');
-                    } else {
-                        cell.classList.add('filtered-out');
-                    }
+                    cell.classList.add('filtered-out');
+                    filteredOutCells++;
                 }
             });
+            
+            console.log(`Total cells: ${totalCells}, Filtered out: ${filteredOutCells}`);
+            
+            // Update empty tabs after filtering
+            checkAndUpdateEmptyTabs();
         }
 
         function findCellData(location) {
@@ -1052,6 +1394,9 @@ const RACK_DATA = {"zones":{"A":{"matrix":[[{"location":"A-1-1","occupied":false
             if (zoneNames.length > 0) {
                 switchZone(zoneNames[0]);
             }
+            
+            // Check and update empty tabs after creating racks
+            checkAndUpdateEmptyTabs();
         }
 
         function createRackCell(location) {
@@ -1207,6 +1552,116 @@ const RACK_DATA = {"zones":{"A":{"matrix":[[{"location":"A-1-1","occupied":false
             document.getElementById('occupiedLocations').textContent = RACK_DATA.occupiedLocations.toLocaleString();
             const rate = (RACK_DATA.occupiedLocations / RACK_DATA.totalLocations * 100).toFixed(2);
             document.getElementById('occupancyRate').textContent = rate + '%';
+        }
+
+        function renderCustomerChart() {
+            const chartContainer = document.getElementById('customerChart');
+            
+            // Count locations by customer
+            const customerLocations = new Map();
+            const totalOccupied = RACK_DATA.occupiedLocations;
+            
+            // Iterate through all zones and cells
+            Object.values(RACK_DATA.zones).forEach(zone => {
+                zone.matrix.forEach(row => {
+                    row.forEach(cell => {
+                        if (cell && cell.occupied && cell.items && cell.items.length > 0) {
+                            const customer = cell.items[0].ownerName; // Use first item's owner
+                            customerLocations.set(customer, (customerLocations.get(customer) || 0) + 1);
+                        }
+                    });
+                });
+            });
+            
+            // Convert to array and sort by count (descending)
+            const sortedCustomers = Array.from(customerLocations.entries())
+                .sort((a, b) => b[1] - a[1]);
+            
+            // Generate HTML for bars
+            let html = '';
+            sortedCustomers.forEach(([customer, count]) => {
+                const percentage = ((count / totalOccupied) * 100).toFixed(1);
+                const color = RACK_DATA.ownerColors[customer] || '#667eea';
+                
+                html += `
+                    <div class="chart-bar-item">
+                        <div class="chart-bar-label" title="${customer}">${customer}</div>
+                        <div class="chart-bar-container">
+                            <div class="chart-bar-bg">
+                                <div class="chart-bar-fill" style="width: ${percentage}%; background: ${color};">
+                                    ${percentage > 10 ? `<span class="chart-bar-percentage">${percentage}%</span>` : ''}
+                                </div>
+                            </div>
+                            <div class="chart-bar-count">${count} (${percentage}%)</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            chartContainer.innerHTML = html || '<div style="text-align: center; padding: 40px; color: #6c757d;">No data available</div>';
+        }
+
+        function switchMainTab(tabName) {
+            currentMainTab = tabName;
+            
+            const rackContainer = document.getElementById('rackContainer');
+            const analyzeContainer = document.getElementById('analyzeContainer');
+            const zoneTabs = document.querySelectorAll('.tab:not([onclick*="switchMainTab"])');
+            const analyzeTab = document.querySelector('.tab[onclick*="switchMainTab"]');
+            
+            if (tabName === 'analyze') {
+                rackContainer.style.display = 'none';
+                analyzeContainer.classList.add('active');
+                zoneTabs.forEach(tab => tab.classList.remove('active'));
+                analyzeTab.classList.add('active');
+                
+                // Render customer chart when switching to analyze tab
+                renderCustomerChart();
+            } else {
+                rackContainer.style.display = 'block';
+                analyzeContainer.classList.remove('active');
+                analyzeTab.classList.remove('active');
+                
+                if (currentZone) {
+                    const activeZoneTab = Array.from(zoneTabs).find(tab => tab.textContent === currentZone);
+                    if (activeZoneTab) activeZoneTab.classList.add('active');
+                }
+            }
+        }
+
+        function checkAndUpdateEmptyTabs() {
+            // Iterate through all zones to check if they're empty
+            Object.keys(RACK_DATA.zones).forEach(zoneName => {
+                const zoneData = RACK_DATA.zones[zoneName];
+                let hasVisibleOccupiedLocation = false;
+                
+                // Check if any location in this zone is occupied and visible (not filtered out)
+                for (const row of zoneData.matrix) {
+                    for (const cell of row) {
+                        if (cell && cell.occupied && cell.items && cell.items.length > 0) {
+                            // Check if this cell is visible (not filtered out)
+                            const cellElement = allCells.get(cell.location);
+                            if (cellElement && !cellElement.classList.contains('filtered-out')) {
+                                hasVisibleOccupiedLocation = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (hasVisibleOccupiedLocation) break;
+                }
+                
+                // Find the tab button for this zone and update its class
+                const tabs = document.querySelectorAll('.tab:not([onclick*="switchMainTab"])');
+                tabs.forEach(tab => {
+                    if (tab.textContent === zoneName) {
+                        if (!hasVisibleOccupiedLocation) {
+                            tab.classList.add('empty-tab');
+                        } else {
+                            tab.classList.remove('empty-tab');
+                        }
+                    }
+                });
+            });
         }
 
         function searchLocation() {
