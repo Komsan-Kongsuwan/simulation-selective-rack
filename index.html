@@ -1152,8 +1152,6 @@
             const aging2years = document.getElementById('aging2years')?.checked || false;
             const agingOver2years = document.getElementById('agingOver2years')?.checked || false;
             
-            console.log(`[matchesAgingFilter] Radio states - All:${agingAll}, ≤6m:${aging6months}, >6m:${aging1year}, >1y:${aging2years}, >2y:${agingOver2years}`);
-            
             // If "All" is selected, show everything
             if (agingAll) {
                 return true;
@@ -1161,48 +1159,40 @@
             
             const ageInMonths = getStockAgeInMonths(item.lot6);
             
-            console.log(`Item ${item.itemCode} - lot6: ${item.lot6}, ageInMonths: ${ageInMonths}, latestDate: ${latestDate}`);
-            
             // If no valid date, don't filter it out (show it)
             if (ageInMonths === null) {
-                console.log(`  -> Showing (no valid date)`);
                 return true;
             }
             
             // Cumulative aging filters
             if (aging6months) {
                 // Show items 0-6 months old
-                const matches = ageInMonths <= 6;
-                console.log(`  -> ≤6 months filter: ${matches} (age: ${ageInMonths})`);
-                return matches;
+                return ageInMonths <= 6;
             }
             if (aging1year) {
                 // Show items older than 6 months (includes > 1 year and > 2 years)
-                const matches = ageInMonths > 6;
-                console.log(`  -> >6 months filter: ${matches} (age: ${ageInMonths})`);
-                return matches;
+                return ageInMonths > 6;
             }
             if (aging2years) {
                 // Show items older than 1 year (includes > 2 years)
-                const matches = ageInMonths > 12;
+                return ageInMonths > 12;
                 console.log(`  -> >1 year filter: ${matches} (age: ${ageInMonths})`);
-                return matches;
             }
             if (agingOver2years) {
                 // Show items older than 2 years
-                const matches = ageInMonths > 24;
-                console.log(`  -> >2 years filter: ${matches} (age: ${ageInMonths})`);
-                return matches;
+                return ageInMonths > 24;
             }
             
-            console.log(`  -> NO FILTER MATCHED - returning false`);
             return false;
         }
 
         function applyFilter() {
-            console.log('=== applyFilter called ===');
+            // Check if data is loaded
+            if (!RACK_DATA) {
+                return;
+            }
+            
             const showAllCustomers = selectedCustomers.size === 0;
-            console.log('Show all customers:', showAllCustomers);
             
             let totalCells = 0;
             let filteredOutCells = 0;
@@ -1224,8 +1214,6 @@
                     // Check aging filter
                     const matchesAging = matchesAgingFilter(item);
                     
-                    console.log(`  Location ${location}: customer=${matchesCustomer}, aging=${matchesAging}, both=${matchesCustomer && matchesAging}`);
-                    
                     // Item must match both filters
                     return matchesCustomer && matchesAging;
                 });
@@ -1237,8 +1225,6 @@
                     filteredOutCells++;
                 }
             });
-            
-            console.log(`Total cells: ${totalCells}, Filtered out: ${filteredOutCells}`);
             
             // Update empty tabs after filtering
             checkAndUpdateEmptyTabs();
