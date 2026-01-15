@@ -1849,31 +1849,6 @@
             }
         }
 
-        function switchMainTab(tabName) {
-            currentMainTab = tabName;
-            
-            const rackContainer = document.getElementById('rackContainer');
-            const analyzeContainer = document.getElementById('analyzeContainer');
-            const zoneTabs = document.querySelectorAll('.tab:not([onclick*="switchMainTab"])');
-            const analyzeTab = document.querySelector('.tab[onclick*="switchMainTab"]');
-            
-            if (tabName === 'analyze') {
-                rackContainer.style.display = 'none';
-                analyzeContainer.classList.add('active');
-                zoneTabs.forEach(tab => tab.classList.remove('active'));
-                analyzeTab.classList.add('active');
-            } else {
-                rackContainer.style.display = 'block';
-                analyzeContainer.classList.remove('active');
-                analyzeTab.classList.remove('active');
-                
-                if (currentZone) {
-                    const activeZoneTab = Array.from(zoneTabs).find(tab => tab.textContent === currentZone);
-                    if (activeZoneTab) activeZoneTab.classList.add('active');
-                }
-            }
-        }
-
         function setZoom(zoomLevel) {
             const container = document.getElementById('rackContainer');
             const matrices = document.querySelectorAll('.rack-matrix');
@@ -2123,9 +2098,9 @@
             const analyzeContainer = document.getElementById('analyzeContainer');
             const analyzeTab = document.querySelector('.tab[onclick*="switchMainTab"]');
             
-            rackContainer.style.display = 'block';
-            analyzeContainer.classList.remove('active');
-            analyzeTab.classList.remove('active');
+            if (rackContainer) rackContainer.style.display = 'block';
+            if (analyzeContainer) analyzeContainer.classList.remove('active');
+            if (analyzeTab) analyzeTab.classList.remove('active');
             
             document.querySelectorAll('.tab:not([onclick*="switchMainTab"])').forEach(tab => {
                 if (tab.textContent === zoneName) {
@@ -2159,6 +2134,11 @@
 
         function renderCustomerChart() {
             const chartContainer = document.getElementById('customerChart');
+            
+            if (!RACK_DATA || !RACK_DATA.zones) {
+                chartContainer.innerHTML = '<div style="text-align: center; padding: 40px; color: #6c757d;">No data available</div>';
+                return;
+            }
             
             // Count locations by customer
             const customerLocations = new Map();
@@ -2213,17 +2193,17 @@
             const analyzeTab = document.querySelector('.tab[onclick*="switchMainTab"]');
             
             if (tabName === 'analyze') {
-                rackContainer.style.display = 'none';
-                analyzeContainer.classList.add('active');
+                if (rackContainer) rackContainer.style.display = 'none';
+                if (analyzeContainer) analyzeContainer.classList.add('active');
                 zoneTabs.forEach(tab => tab.classList.remove('active'));
-                analyzeTab.classList.add('active');
+                if (analyzeTab) analyzeTab.classList.add('active');
                 
                 // Render customer chart when switching to analyze tab
                 renderCustomerChart();
             } else {
-                rackContainer.style.display = 'block';
-                analyzeContainer.classList.remove('active');
-                analyzeTab.classList.remove('active');
+                if (rackContainer) rackContainer.style.display = 'block';
+                if (analyzeContainer) analyzeContainer.classList.remove('active');
+                if (analyzeTab) analyzeTab.classList.remove('active');
                 
                 if (currentZone) {
                     const activeZoneTab = Array.from(zoneTabs).find(tab => tab.textContent === currentZone);
@@ -2233,6 +2213,8 @@
         }
 
         function checkAndUpdateEmptyTabs() {
+            if (!RACK_DATA || !RACK_DATA.zones) return;
+            
             // Iterate through all zones to check if they're empty
             Object.keys(RACK_DATA.zones).forEach(zoneName => {
                 const zoneData = RACK_DATA.zones[zoneName];
