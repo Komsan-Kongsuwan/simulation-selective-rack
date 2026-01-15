@@ -1297,6 +1297,9 @@
                     }
                     
                     const lot6 = row['Lot6'];
+                    const lot2 = row['Lot2'];
+                    const damageFlag = row['Damage Flag'];
+                    
                     if (lot6) {
                         const itemDate = parseDDMMYYYY(lot6);
                         if (itemDate && (!maxDate || itemDate > maxDate)) {
@@ -1311,7 +1314,9 @@
                         itemName: row['Item Name'] || '',
                         stockQty: parseFloat(row['StockQty[Unit1]']) || 0,
                         uom: row['UOM1'] || '',
-                        lot6: lot6 || ''
+                        lot6: lot6 || '',
+                        lot2: lot2 || '',
+                        damageFlag: damageFlag || ''
                     });
                 }
             });
@@ -1324,8 +1329,6 @@
                 ownerColors[owner] = colors[i % colors.length];
             });
 
-            // Process Excel data (first row is headers = zone names)
-            const headers = excelData[0];
             const rackData = {
                 zones: {},
                 totalLocations: 0,
@@ -1334,19 +1337,58 @@
                 latestDate: maxDate ? formatDateToDDMMYYYY(maxDate) : null
             };
 
-            headers.forEach((zoneName, colIndex) => {
-                const zoneData = { matrix: [] };
-                const rackDict = {};
+            // Detect Excel format
+            const isNewFormat = Array.isArray(excelData[0]) && 
+                                excelData[0].includes('Sheet') && 
+                                excelData[0].includes('Location');
+            
+            if (isNewFormat) {
+                // New format: has columns Sheet, Location, Level, etc.
+                console.log('Detected new Excel format (with Sheet, Location columns)');
+                
+                // Convert array of arrays to array of objects
+                const headers = excelData[0];
+                const rows = excelData.slice(1).map(row => {
+                    const obj = {};
+                    headers.forEach((header, i) => {
+                        obj[header] = row[i];
+                    });
+                    return obj;
+                });
 
-                // Get all locations in this column (skip header row)
-                for (let rowIndex = 1; rowIndex < excelData.length; rowIndex++) {
-                    const location = excelData[rowIndex][colIndex];
-                    if (location) {
+                // Group by Sheet (zone)
+                const zoneGroups = {};
+                rows.forEach(row => {
+                    const zoneName = row['Sheet'];
+                    const location = row['Location'];
+                    
+                    if (zoneName && location) {
+                        if (!zoneGroups[zoneName]) {
+                            zoneGroups[zoneName] = [];
+                        }
+                        zoneGroups[zoneName].push(location);
+                    }
+                });
+
+                // Process each zone
+                Object.keys(zoneGroups).sort().forEach(zoneName => {
+                    const locations = zoneGroups[zoneName];
+                    const zoneData = { matrix: [] };
+                    const rackDict = {};
+
+                    locations.forEach(location => {
                         try {
                             const parts = location.split('-');
-                            if (parts.length >= 3) {
-                                const level = parseInt(parts[1]);
-                                const bay = parseInt(parts[2]);
+                            if (parts.length >= 2) {
+                                // Extract level and bay from location
+                                // Format: A09-01 or similar
+                                const levelPart = parts[0]; // e.g., "A09"
+                                const bayPart = parts[1];   // e.g., "01"
+                                
+                                // Extract numeric level from levelPart
+                                const levelMatch = levelPart.match(/\d+$/);
+                                const level = levelMatch ? parseInt(levelMatch[0]) : 1;
+                                const bay = parseInt(bayPart);
                                 
                                 if (!rackDict[level]) {
                                     rackDict[level] = {};
@@ -1354,48 +1396,117 @@
                                 rackDict[level][bay] = location;
                             }
                         } catch (e) {
-                            // Skip invalid locations
+                            console.error('Error parsing location:', location, e);
+                        }
+                    });
+
+                    // Build matrix
+                    if (Object.keys(rackDict).length > 0) {
+                        const maxLevel = Math.max(...Object.keys(rackDict).map(Number));
+                        const maxBay = Math.max(...Object.values(rackDict).map(levelData => 
+                            Math.max(...Object.keys(levelData).map(Number))
+                        ));
+
+                        // Create matrix (top level first)
+                        for (let level = maxLevel; level >= 1; level--) {
+                            const row = [];
+                            for (let bay = 1; bay <= maxBay; bay++) {
+                                if (rackDict[level] && rackDict[level][bay]) {
+                                    const location = rackDict[level][bay];
+                                    rackData.totalLocations++;
+
+                                    const items = stockByLocation[location] || [];
+                                    const occupied = items.length > 0;
+
+                                    if (occupied) {
+                                        rackData.occupiedLocations++;
+                                    }
+
+                                    row.push({
+                                        location: location,
+                                        occupied: occupied,
+                                        items: items
+                                    });
+                                } else {
+                                    row.push(null);
+                                }
+                            }
+                            zoneData.matrix.push(row);
                         }
                     }
-                }
 
-                // Build matrix
-                if (Object.keys(rackDict).length > 0) {
-                    const maxLevel = Math.max(...Object.keys(rackDict).map(Number));
-                    const maxBay = Math.max(...Object.values(rackDict).map(levelData => 
-                        Math.max(...Object.keys(levelData).map(Number))
-                    ));
+                    rackData.zones[zoneName] = zoneData;
+                });
 
-                    // Create matrix (top level first)
-                    for (let level = maxLevel; level >= 1; level--) {
-                        const row = [];
-                        for (let bay = 1; bay <= maxBay; bay++) {
-                            if (rackDict[level] && rackDict[level][bay]) {
-                                const location = rackDict[level][bay];
-                                rackData.totalLocations++;
+            } else {
+                // Old format: each column is a zone
+                console.log('Detected old Excel format (columns are zones)');
+                
+                const headers = excelData[0];
 
-                                const items = stockByLocation[location] || [];
-                                const occupied = items.length > 0;
+                headers.forEach((zoneName, colIndex) => {
+                    const zoneData = { matrix: [] };
+                    const rackDict = {};
 
-                                if (occupied) {
-                                    rackData.occupiedLocations++;
+                    // Get all locations in this column (skip header row)
+                    for (let rowIndex = 1; rowIndex < excelData.length; rowIndex++) {
+                        const location = excelData[rowIndex][colIndex];
+                        if (location) {
+                            try {
+                                const parts = location.split('-');
+                                if (parts.length >= 3) {
+                                    const level = parseInt(parts[1]);
+                                    const bay = parseInt(parts[2]);
+                                    
+                                    if (!rackDict[level]) {
+                                        rackDict[level] = {};
+                                    }
+                                    rackDict[level][bay] = location;
                                 }
-
-                                row.push({
-                                    location: location,
-                                    occupied: occupied,
-                                    items: items
-                                });
-                            } else {
-                                row.push(null);
+                            } catch (e) {
+                                // Skip invalid locations
                             }
                         }
-                        zoneData.matrix.push(row);
                     }
-                }
 
-                rackData.zones[zoneName] = zoneData;
-            });
+                    // Build matrix
+                    if (Object.keys(rackDict).length > 0) {
+                        const maxLevel = Math.max(...Object.keys(rackDict).map(Number));
+                        const maxBay = Math.max(...Object.values(rackDict).map(levelData => 
+                            Math.max(...Object.keys(levelData).map(Number))
+                        ));
+
+                        // Create matrix (top level first)
+                        for (let level = maxLevel; level >= 1; level--) {
+                            const row = [];
+                            for (let bay = 1; bay <= maxBay; bay++) {
+                                if (rackDict[level] && rackDict[level][bay]) {
+                                    const location = rackDict[level][bay];
+                                    rackData.totalLocations++;
+
+                                    const items = stockByLocation[location] || [];
+                                    const occupied = items.length > 0;
+
+                                    if (occupied) {
+                                        rackData.occupiedLocations++;
+                                    }
+
+                                    row.push({
+                                        location: location,
+                                        occupied: occupied,
+                                        items: items
+                                    });
+                                } else {
+                                    row.push(null);
+                                }
+                            }
+                            zoneData.matrix.push(row);
+                        }
+                    }
+
+                    rackData.zones[zoneName] = zoneData;
+                });
+            }
 
             return rackData;
         }
@@ -1933,14 +2044,26 @@
                                 </div>
                                 <div class="info-row">
                                     <span class="info-label">Quantity</span>
-                                    <span class="info-value">${item.qty} ${item.uom}</span>
+                                    <span class="info-value">${item.stockQty || item.qty} ${item.uom}</span>
                                 </div>
                                 ${item.lot6 ? `
                                 <div class="info-row">
-                                    <span class="info-label">Date (Lot6)</span>
+                                    <span class="info-label">Lot6 (Date)</span>
                                     <span class="info-value">${item.lot6}</span>
                                 </div>
-                                ` : '<div></div>'}
+                                ` : ''}
+                                ${item.lot2 ? `
+                                <div class="info-row">
+                                    <span class="info-label">Lot2</span>
+                                    <span class="info-value">${item.lot2}</span>
+                                </div>
+                                ` : ''}
+                                ${item.damageFlag ? `
+                                <div class="info-row">
+                                    <span class="info-label">Damage Flag</span>
+                                    <span class="info-value" style="font-weight: 600; color: ${item.damageFlag === 'Good' ? '#28a745' : (item.damageFlag === 'Held' ? '#ffc107' : '#dc3545')}">${item.damageFlag}</span>
+                                </div>
+                                ` : ''}
                             </div>
                         </div>
                     `;
