@@ -1337,58 +1337,37 @@
                 latestDate: maxDate ? formatDateToDDMMYYYY(maxDate) : null
             };
 
-            // Detect Excel format
-            const isNewFormat = Array.isArray(excelData[0]) && 
-                                excelData[0].includes('Sheet') && 
-                                excelData[0].includes('Location');
+            // Excel format: Sheet1 has zone columns with location IDs
+            // Location ID format: {Zone}{Bay}-{Level} (e.g., A09-07 = Zone A, Bay 9, Level 7)
+            console.log('Processing Excel data with format: Zone columns with Location IDs');
             
-            if (isNewFormat) {
-                // New format: has columns Sheet, Location, Level, etc.
-                console.log('Detected new Excel format (with Sheet, Location columns)');
-                
-                // Convert array of arrays to array of objects
-                const headers = excelData[0];
-                const rows = excelData.slice(1).map(row => {
-                    const obj = {};
-                    headers.forEach((header, i) => {
-                        obj[header] = row[i];
-                    });
-                    return obj;
-                });
+            const headers = excelData[0]; // Zone names (A, B, C, etc.)
 
-                // Group by Sheet (zone)
-                const zoneGroups = {};
-                rows.forEach(row => {
-                    const zoneName = row['Sheet'];
-                    const location = row['Location'];
-                    
-                    if (zoneName && location) {
-                        if (!zoneGroups[zoneName]) {
-                            zoneGroups[zoneName] = [];
-                        }
-                        zoneGroups[zoneName].push(location);
-                    }
-                });
+            headers.forEach((zoneName, colIndex) => {
+                const zoneData = { matrix: [] };
+                const rackDict = {};
 
-                // Process each zone
-                Object.keys(zoneGroups).sort().forEach(zoneName => {
-                    const locations = zoneGroups[zoneName];
-                    const zoneData = { matrix: [] };
-                    const rackDict = {};
-
-                    locations.forEach(location => {
+                // Get all locations in this column (skip header row)
+                for (let rowIndex = 1; rowIndex < excelData.length; rowIndex++) {
+                    const location = excelData[rowIndex][colIndex];
+                    if (location && location.trim()) {
                         try {
+                            // Parse location format: {Zone}{Bay}-{Level}
+                            // Example: A09-07, B12-05, C01-10
                             const parts = location.split('-');
                             if (parts.length >= 2) {
-                                // Extract level and bay from location
-                                // Format: A09-01 or similar
-                                const levelPart = parts[0]; // e.g., "A09"
-                                const bayPart = parts[1];   // e.g., "01"
+                                const leftPart = parts[0];  // e.g., "A09", "B12"
+                                const level = parseInt(parts[1]); // e.g., "07" = 7
                                 
-                                // Extract numeric level from levelPart
-                                const levelMatch = levelPart.match(/\d+$/);
-                                const level = levelMatch ? parseInt(levelMatch[0]) : 1;
-                                const bay = parseInt(bayPart);
+                                // Extract bay from leftPart (remove zone letter(s))
+                                // Zone can be single letter (A) or double (LL, MM)
+                                let bay;
+                                const bayMatch = leftPart.match(/\d+$/);
+                                if (bayMatch) {
+                                    bay = parseInt(bayMatch[0]);
+                                } else {
+                                    continue; // Skip if can't parse
+                                }
                                 
                                 if (!rackDict[level]) {
                                     rackDict[level] = {};
@@ -1398,115 +1377,46 @@
                         } catch (e) {
                             console.error('Error parsing location:', location, e);
                         }
-                    });
-
-                    // Build matrix
-                    if (Object.keys(rackDict).length > 0) {
-                        const maxLevel = Math.max(...Object.keys(rackDict).map(Number));
-                        const maxBay = Math.max(...Object.values(rackDict).map(levelData => 
-                            Math.max(...Object.keys(levelData).map(Number))
-                        ));
-
-                        // Create matrix (top level first)
-                        for (let level = maxLevel; level >= 1; level--) {
-                            const row = [];
-                            for (let bay = 1; bay <= maxBay; bay++) {
-                                if (rackDict[level] && rackDict[level][bay]) {
-                                    const location = rackDict[level][bay];
-                                    rackData.totalLocations++;
-
-                                    const items = stockByLocation[location] || [];
-                                    const occupied = items.length > 0;
-
-                                    if (occupied) {
-                                        rackData.occupiedLocations++;
-                                    }
-
-                                    row.push({
-                                        location: location,
-                                        occupied: occupied,
-                                        items: items
-                                    });
-                                } else {
-                                    row.push(null);
-                                }
-                            }
-                            zoneData.matrix.push(row);
-                        }
                     }
+                }
 
-                    rackData.zones[zoneName] = zoneData;
-                });
+                // Build matrix
+                if (Object.keys(rackDict).length > 0) {
+                    const maxLevel = Math.max(...Object.keys(rackDict).map(Number));
+                    const maxBay = Math.max(...Object.values(rackDict).map(levelData => 
+                        Math.max(...Object.keys(levelData).map(Number))
+                    ));
 
-            } else {
-                // Old format: each column is a zone
-                console.log('Detected old Excel format (columns are zones)');
-                
-                const headers = excelData[0];
+                    // Create matrix (top level first)
+                    for (let level = maxLevel; level >= 1; level--) {
+                        const row = [];
+                        for (let bay = 1; bay <= maxBay; bay++) {
+                            if (rackDict[level] && rackDict[level][bay]) {
+                                const location = rackDict[level][bay];
+                                rackData.totalLocations++;
 
-                headers.forEach((zoneName, colIndex) => {
-                    const zoneData = { matrix: [] };
-                    const rackDict = {};
+                                const items = stockByLocation[location] || [];
+                                const occupied = items.length > 0;
 
-                    // Get all locations in this column (skip header row)
-                    for (let rowIndex = 1; rowIndex < excelData.length; rowIndex++) {
-                        const location = excelData[rowIndex][colIndex];
-                        if (location) {
-                            try {
-                                const parts = location.split('-');
-                                if (parts.length >= 3) {
-                                    const level = parseInt(parts[1]);
-                                    const bay = parseInt(parts[2]);
-                                    
-                                    if (!rackDict[level]) {
-                                        rackDict[level] = {};
-                                    }
-                                    rackDict[level][bay] = location;
+                                if (occupied) {
+                                    rackData.occupiedLocations++;
                                 }
-                            } catch (e) {
-                                // Skip invalid locations
+
+                                row.push({
+                                    location: location,
+                                    occupied: occupied,
+                                    items: items
+                                });
+                            } else {
+                                row.push(null);
                             }
                         }
+                        zoneData.matrix.push(row);
                     }
+                }
 
-                    // Build matrix
-                    if (Object.keys(rackDict).length > 0) {
-                        const maxLevel = Math.max(...Object.keys(rackDict).map(Number));
-                        const maxBay = Math.max(...Object.values(rackDict).map(levelData => 
-                            Math.max(...Object.keys(levelData).map(Number))
-                        ));
-
-                        // Create matrix (top level first)
-                        for (let level = maxLevel; level >= 1; level--) {
-                            const row = [];
-                            for (let bay = 1; bay <= maxBay; bay++) {
-                                if (rackDict[level] && rackDict[level][bay]) {
-                                    const location = rackDict[level][bay];
-                                    rackData.totalLocations++;
-
-                                    const items = stockByLocation[location] || [];
-                                    const occupied = items.length > 0;
-
-                                    if (occupied) {
-                                        rackData.occupiedLocations++;
-                                    }
-
-                                    row.push({
-                                        location: location,
-                                        occupied: occupied,
-                                        items: items
-                                    });
-                                } else {
-                                    row.push(null);
-                                }
-                            }
-                            zoneData.matrix.push(row);
-                        }
-                    }
-
-                    rackData.zones[zoneName] = zoneData;
-                });
-            }
+                rackData.zones[zoneName] = zoneData;
+            });
 
             return rackData;
         }
