@@ -1331,6 +1331,7 @@
 
             const rackData = {
                 zones: {},
+                zoneOrder: [], // Preserve Excel column order
                 totalLocations: 0,
                 occupiedLocations: 0,
                 ownerColors: ownerColors,
@@ -1342,6 +1343,9 @@
             const headers = excelData[0]; // Zone names
 
             headers.forEach((zoneName, colIndex) => {
+                // Store zone order as it appears in Excel
+                rackData.zoneOrder.push(zoneName);
+                
                 const zoneData = { matrix: [] };
                 const rackDict = {};
 
@@ -1795,12 +1799,8 @@
             tabsContainer.innerHTML = '';
             zoneContents.innerHTML = '';
             
-            const zoneNames = Object.keys(RACK_DATA.zones).sort((a, b) => {
-                const order = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','X','O','P','Q','R','S',
-                               'LL','MM','NN','OO','PP','QQ','RR','SS','TT','UU','VV','WW','XX','YY',
-                               'Z1','Z2','Z3','Z4','Z5','Z6'];
-                return order.indexOf(a) - order.indexOf(b);
-            });
+            // Use the zone order from RACK_DATA (preserved from Excel)
+            const zoneNames = RACK_DATA.zoneOrder || Object.keys(RACK_DATA.zones);
 
             zoneNames.forEach((zoneName) => {
                 const tab = document.createElement('button');
