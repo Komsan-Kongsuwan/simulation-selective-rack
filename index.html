@@ -1337,11 +1337,9 @@
                 latestDate: maxDate ? formatDateToDDMMYYYY(maxDate) : null
             };
 
-            // Excel format: Sheet1 has zone columns with location IDs
-            // Location ID format: {Zone}{Bay}-{Level} (e.g., A09-07 = Zone A, Bay 9, Level 7)
-            console.log('Processing Excel data with format: Zone columns with Location IDs');
-            
-            const headers = excelData[0]; // Zone names (A, B, C, etc.)
+            // Standard Excel format: Zone columns with Location IDs
+            // Location ID format: {Zone}-{Level}-{Bay} (e.g., A-1-1, NN-2-12, Z5-6-21)
+            const headers = excelData[0]; // Zone names
 
             headers.forEach((zoneName, colIndex) => {
                 const zoneData = { matrix: [] };
@@ -1352,30 +1350,21 @@
                     const location = excelData[rowIndex][colIndex];
                     if (location && location.trim()) {
                         try {
-                            // Parse location format: {Zone}{Bay}-{Level}
-                            // Example: A09-07, B12-05, C01-10
+                            // Parse format: {Zone}-{Level}-{Bay}
                             const parts = location.split('-');
-                            if (parts.length >= 2) {
-                                const leftPart = parts[0];  // e.g., "A09", "B12"
-                                const level = parseInt(parts[1]); // e.g., "07" = 7
+                            if (parts.length >= 3) {
+                                const level = parseInt(parts[1]);
+                                const bay = parseInt(parts[2]);
                                 
-                                // Extract bay from leftPart (remove zone letter(s))
-                                // Zone can be single letter (A) or double (LL, MM)
-                                let bay;
-                                const bayMatch = leftPart.match(/\d+$/);
-                                if (bayMatch) {
-                                    bay = parseInt(bayMatch[0]);
-                                } else {
-                                    continue; // Skip if can't parse
+                                if (!isNaN(level) && !isNaN(bay)) {
+                                    if (!rackDict[level]) {
+                                        rackDict[level] = {};
+                                    }
+                                    rackDict[level][bay] = location;
                                 }
-                                
-                                if (!rackDict[level]) {
-                                    rackDict[level] = {};
-                                }
-                                rackDict[level][bay] = location;
                             }
                         } catch (e) {
-                            console.error('Error parsing location:', location, e);
+                            // Skip invalid locations
                         }
                     }
                 }
