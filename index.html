@@ -1012,9 +1012,13 @@
                 }
                 RACK_DATA = await response.json();
                 
-                // Find the latest date in all items
-                latestDate = null;
+                // Use the latest date from JSON data
+                if (RACK_DATA.latestDate) {
+                    latestDate = parseDDMMYYYY(RACK_DATA.latestDate);
+                    console.log('Latest date from data:', RACK_DATA.latestDate, latestDate);
+                }
                 
+                // Find all customers
                 for (const [zoneName, zoneData] of Object.entries(RACK_DATA.zones)) {
                     for (const row of zoneData.matrix) {
                         for (const cell of row) {
@@ -1024,21 +1028,11 @@
                                         allCustomers.add(item.ownerName);
                                         customerCounts[item.ownerName] = (customerCounts[item.ownerName] || 0) + 1;
                                     }
-                                    
-                                    // Find the latest date
-                                    if (item.lot6) {
-                                        const itemDate = parseDDMMYYYY(item.lot6);
-                                        if (itemDate && (!latestDate || itemDate > latestDate)) {
-                                            latestDate = itemDate;
-                                        }
-                                    }
                                 });
                             }
                         }
                     }
                 }
-
-                console.log('Latest date found in data:', latestDate);
                 
                 populateCustomerList();
                 displayTabs();
