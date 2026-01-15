@@ -1033,7 +1033,7 @@
 
         <div class="tabs-container">
             <div class="tabs" id="tabs">
-                <button class="tab" onclick="switchMainTab('analyze')">Analyze</button>
+                <!-- Tabs will be generated dynamically -->
             </div>
         </div>
 
@@ -1524,6 +1524,33 @@
             allCustomers.clear();
             customerCounts = {};
             selectedCustomers.clear();
+            currentZone = null;
+            
+            // Clear all UI elements
+            const tabsContainer = document.getElementById('tabs');
+            const zoneContents = document.getElementById('zoneContents');
+            const customerList = document.getElementById('customerList');
+            
+            // Remove all tabs
+            tabsContainer.innerHTML = '';
+            
+            // Remove all zone contents
+            zoneContents.innerHTML = '';
+            
+            // Clear customer list
+            customerList.innerHTML = '';
+            
+            // Reset filters
+            document.getElementById('agingAll').checked = true;
+            
+            // Clear stats
+            document.getElementById('totalLocations').textContent = '-';
+            document.getElementById('occupiedLocations').textContent = '-';
+            document.getElementById('occupancyRate').textContent = '-';
+            
+            // Show loading message
+            document.getElementById('loadingMessage').style.display = 'block';
+            document.getElementById('loadingMessage').textContent = 'Loading new data...';
             
             // Reload with new data
             loadData();
@@ -1890,6 +1917,10 @@
             const tabsContainer = document.getElementById('tabs');
             const zoneContents = document.getElementById('zoneContents');
             
+            // Clear existing tabs and zones (important for reload)
+            tabsContainer.innerHTML = '';
+            zoneContents.innerHTML = '';
+            
             const zoneNames = Object.keys(RACK_DATA.zones).sort((a, b) => {
                 const order = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','X','O','P','Q','R','S',
                                'LL','MM','NN','OO','PP','QQ','RR','SS','TT','UU','VV','WW','XX','YY',
@@ -1943,6 +1974,13 @@
                 zoneDiv.appendChild(matrix);
                 zoneContents.appendChild(zoneDiv);
             });
+            
+            // Add Analyze tab at the end
+            const analyzeTab = document.createElement('button');
+            analyzeTab.className = 'tab';
+            analyzeTab.textContent = 'Analyze';
+            analyzeTab.onclick = () => switchMainTab('analyze');
+            tabsContainer.appendChild(analyzeTab);
 
             if (zoneNames.length > 0) {
                 switchZone(zoneNames[0]);
