@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Selective Rack Simulation</title>
+    <!-- SheetJS library for Excel file reading -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- PapaParse library for CSV file reading -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -866,6 +870,145 @@
                 margin-left: -180px;
             }
         }
+
+        /* File Upload Modal Styles */
+        .file-upload-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .file-upload-overlay.show {
+            display: flex;
+        }
+
+        .file-upload-container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 90%;
+        }
+
+        .file-upload-container h2 {
+            color: #2a5298;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .file-input-group {
+            margin-bottom: 25px;
+        }
+
+        .file-input-group label {
+            display: block;
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+        }
+
+        .file-input-group input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-input-group input[type="file"]:hover {
+            border-color: #5568d3;
+            background: #f8f9ff;
+        }
+
+        .file-name-display {
+            margin-top: 5px;
+            font-size: 0.9em;
+            color: #28a745;
+            font-weight: 500;
+        }
+
+        .load-files-button {
+            width: 100%;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+
+        .load-files-button:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102,126,234,0.3);
+        }
+
+        .load-files-button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .file-error-message {
+            color: #dc3545;
+            font-size: 0.9em;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8d7da;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .file-loading-spinner {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+
+        .file-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .cancel-upload-btn {
+            width: 100%;
+            padding: 12px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .cancel-upload-btn:hover {
+            background: #5a6268;
+        }
     </style>
 </head>
 <body>
@@ -881,6 +1024,7 @@
                 <button onclick="clearSearch()" style="background: #6c757d;">Clear</button>
             </div>
             <div class="control-buttons">
+                <button onclick="showFileUploadModal()" style="background: #28a745;">📁 Load Files</button>
                 <button onclick="setZoom('100')" id="zoom100" class="active">100%</button>
                 <button onclick="setZoom('75')" id="zoom75">75%</button>
                 <button onclick="setZoom('fit')" id="zoomFit">Fit Width</button>
@@ -975,6 +1119,35 @@
         </div>
     </div>
 
+    <!-- File Upload Modal -->
+    <div id="fileUploadOverlay" class="file-upload-overlay">
+        <div class="file-upload-container">
+            <h2>Load Data Files</h2>
+            
+            <div class="file-input-group">
+                <label for="excelFile">Rack Locations (Excel file):</label>
+                <input type="file" id="excelFile" accept=".xlsx,.xls" />
+                <div id="excelFileName" class="file-name-display"></div>
+            </div>
+            
+            <div class="file-input-group">
+                <label for="csvFile">Stock Locations (CSV file):</label>
+                <input type="file" id="csvFile" accept=".csv" />
+                <div id="csvFileName" class="file-name-display"></div>
+            </div>
+            
+            <button id="loadFilesBtn" class="load-files-button" disabled>Load Data</button>
+            <button class="cancel-upload-btn" onclick="hideFileUploadModal()">Cancel</button>
+            
+            <div id="fileLoadingSpinner" class="file-loading-spinner">
+                <div class="file-spinner"></div>
+                <p style="margin-top: 15px; color: #667eea; font-weight: 600;">Processing files...</p>
+            </div>
+            
+            <div id="fileErrorMessage" class="file-error-message"></div>
+        </div>
+    </div>
+
     <script>
         let RACK_DATA = null;
         let currentZone = null;
@@ -986,6 +1159,281 @@
         let sidebarVisible = true;
         let currentMainTab = 'rack';
         let latestDate = null;
+        
+        let excelFileData = null;
+        let csvFileData = null;
+
+        // File upload modal functions
+        function showFileUploadModal() {
+            document.getElementById('fileUploadOverlay').classList.add('show');
+            // Reset file inputs
+            document.getElementById('excelFile').value = '';
+            document.getElementById('csvFile').value = '';
+            document.getElementById('excelFileName').textContent = '';
+            document.getElementById('csvFileName').textContent = '';
+            document.getElementById('fileErrorMessage').style.display = 'none';
+            excelFileData = null;
+            csvFileData = null;
+            checkFilesReady();
+        }
+
+        function hideFileUploadModal() {
+            document.getElementById('fileUploadOverlay').classList.remove('show');
+        }
+
+        // File upload handlers
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('excelFile').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    excelFileData = file;
+                    document.getElementById('excelFileName').textContent = `✓ ${file.name}`;
+                    checkFilesReady();
+                }
+            });
+
+            document.getElementById('csvFile').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (file) {
+                    csvFileData = file;
+                    document.getElementById('csvFileName').textContent = `✓ ${file.name}`;
+                    checkFilesReady();
+                }
+            });
+
+            document.getElementById('loadFilesBtn').addEventListener('click', async function() {
+                document.getElementById('fileErrorMessage').style.display = 'none';
+                document.getElementById('fileLoadingSpinner').style.display = 'block';
+                this.disabled = true;
+
+                try {
+                    await processFiles();
+                    hideFileUploadModal();
+                    reloadDataDisplay();
+                } catch (error) {
+                    console.error('Error processing files:', error);
+                    document.getElementById('fileErrorMessage').textContent = 'Error: ' + error.message;
+                    document.getElementById('fileErrorMessage').style.display = 'block';
+                    this.disabled = false;
+                } finally {
+                    document.getElementById('fileLoadingSpinner').style.display = 'none';
+                }
+            });
+            
+            // Search input enter key
+            document.getElementById('searchInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchLocation();
+                }
+            });
+            
+            // Load initial data
+            loadInitialData();
+        });
+
+        function checkFilesReady() {
+            const loadBtn = document.getElementById('loadFilesBtn');
+            if (excelFileData && csvFileData) {
+                loadBtn.disabled = false;
+            } else {
+                loadBtn.disabled = true;
+            }
+        }
+
+        async function processFiles() {
+            // Read Excel file
+            const excelData = await readExcelFile(excelFileData);
+            
+            // Read CSV file
+            const csvData = await readCSVFile(csvFileData);
+            
+            // Convert to RACK_DATA format
+            RACK_DATA = convertToRackData(excelData, csvData);
+            
+            console.log('Data loaded successfully:', RACK_DATA);
+        }
+
+        function readExcelFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                        resolve(jsonData);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function readCSVFile(file) {
+            return new Promise((resolve, reject) => {
+                Papa.parse(file, {
+                    header: true,
+                    complete: function(results) {
+                        resolve(results.data);
+                    },
+                    error: reject
+                });
+            });
+        }
+
+        function convertToRackData(excelData, csvData) {
+            // Process CSV to create stock lookup
+            const stockByLocation = {};
+            let maxDate = null;
+
+            csvData.forEach(row => {
+                const location = row['Location'];
+                if (location && location.trim()) {
+                    if (!stockByLocation[location]) {
+                        stockByLocation[location] = [];
+                    }
+                    
+                    const lot6 = row['Lot6'];
+                    if (lot6) {
+                        const itemDate = parseDDMMYYYY(lot6);
+                        if (itemDate && (!maxDate || itemDate > maxDate)) {
+                            maxDate = itemDate;
+                        }
+                    }
+                    
+                    stockByLocation[location].push({
+                        ownerCode: row['Owner Code'] || '',
+                        ownerName: row['Owner Name'] || '',
+                        itemCode: row['Item Code'] || '',
+                        itemName: row['Item Name'] || '',
+                        stockQty: parseFloat(row['StockQty[Unit1]']) || 0,
+                        uom: row['UOM1'] || '',
+                        lot6: lot6 || ''
+                    });
+                }
+            });
+
+            // Get unique owners and assign colors
+            const uniqueOwners = [...new Set(csvData.map(row => row['Owner Name']).filter(Boolean))];
+            const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739', '#52B788'];
+            const ownerColors = {};
+            uniqueOwners.forEach((owner, i) => {
+                ownerColors[owner] = colors[i % colors.length];
+            });
+
+            // Process Excel data (first row is headers = zone names)
+            const headers = excelData[0];
+            const rackData = {
+                zones: {},
+                totalLocations: 0,
+                occupiedLocations: 0,
+                ownerColors: ownerColors,
+                latestDate: maxDate ? formatDateToDDMMYYYY(maxDate) : null
+            };
+
+            headers.forEach((zoneName, colIndex) => {
+                const zoneData = { matrix: [] };
+                const rackDict = {};
+
+                // Get all locations in this column (skip header row)
+                for (let rowIndex = 1; rowIndex < excelData.length; rowIndex++) {
+                    const location = excelData[rowIndex][colIndex];
+                    if (location) {
+                        try {
+                            const parts = location.split('-');
+                            if (parts.length >= 3) {
+                                const level = parseInt(parts[1]);
+                                const bay = parseInt(parts[2]);
+                                
+                                if (!rackDict[level]) {
+                                    rackDict[level] = {};
+                                }
+                                rackDict[level][bay] = location;
+                            }
+                        } catch (e) {
+                            // Skip invalid locations
+                        }
+                    }
+                }
+
+                // Build matrix
+                if (Object.keys(rackDict).length > 0) {
+                    const maxLevel = Math.max(...Object.keys(rackDict).map(Number));
+                    const maxBay = Math.max(...Object.values(rackDict).map(levelData => 
+                        Math.max(...Object.keys(levelData).map(Number))
+                    ));
+
+                    // Create matrix (top level first)
+                    for (let level = maxLevel; level >= 1; level--) {
+                        const row = [];
+                        for (let bay = 1; bay <= maxBay; bay++) {
+                            if (rackDict[level] && rackDict[level][bay]) {
+                                const location = rackDict[level][bay];
+                                rackData.totalLocations++;
+
+                                const items = stockByLocation[location] || [];
+                                const occupied = items.length > 0;
+
+                                if (occupied) {
+                                    rackData.occupiedLocations++;
+                                }
+
+                                row.push({
+                                    location: location,
+                                    occupied: occupied,
+                                    items: items
+                                });
+                            } else {
+                                row.push(null);
+                            }
+                        }
+                        zoneData.matrix.push(row);
+                    }
+                }
+
+                rackData.zones[zoneName] = zoneData;
+            });
+
+            return rackData;
+        }
+
+        function formatDateToDDMMYYYY(date) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            return `${day}/${month}/${year}`;
+        }
+
+        function reloadDataDisplay() {
+            // Clear existing data
+            allCells.clear();
+            allCustomers.clear();
+            customerCounts = {};
+            selectedCustomers.clear();
+            
+            // Reload with new data
+            loadData();
+        }
+
+        async function loadInitialData() {
+            try {
+                // Load data from JSON file
+                const response = await fetch('rack_data.json');
+                if (!response.ok) {
+                    throw new Error('Failed to load rack_data.json');
+                }
+                RACK_DATA = await response.json();
+                
+                loadData();
+            } catch (error) {
+                document.getElementById('loadingMessage').innerHTML = 
+                    '<span style="color: red;">Error loading initial data: ' + error.message + '<br>Please use the "Load Files" button to load your data.</span>';
+                console.error('Error loading initial data:', error);
+            }
+        }
 
         // Helper function to parse DD/MM/YYYY dates
         function parseDDMMYYYY(dateString) {
@@ -1003,22 +1451,15 @@
             return date;
         }
 
-        async function loadData() {
+        function loadData() {
             try {
-                // Load data from JSON file
-                const response = await fetch('rack_data.json');
-                if (!response.ok) {
-                    throw new Error('Failed to load rack data');
-                }
-                RACK_DATA = await response.json();
-                
-                // Use the latest date from JSON data
+                // Use the latest date from data if available
                 if (RACK_DATA.latestDate) {
                     latestDate = parseDDMMYYYY(RACK_DATA.latestDate);
-                    console.log('Latest date from data:', RACK_DATA.latestDate, latestDate);
+                } else {
+                    latestDate = null;
                 }
                 
-                // Find all customers
                 for (const [zoneName, zoneData] of Object.entries(RACK_DATA.zones)) {
                     for (const row of zoneData.matrix) {
                         for (const cell of row) {
@@ -1040,7 +1481,7 @@
                 document.getElementById('loadingMessage').style.display = 'none';
             } catch (error) {
                 document.getElementById('loadingMessage').innerHTML = 
-                    '<span style="color: red;">Error loading data: ' + error.message + '<br>Please ensure rack_data.json is in the same directory as this HTML file.</span>';
+                    '<span style="color: red;">Error loading data: ' + error.message + '</span>';
                 console.error('Error loading data:', error);
             }
         }
@@ -1146,6 +1587,8 @@
             const aging2years = document.getElementById('aging2years')?.checked || false;
             const agingOver2years = document.getElementById('agingOver2years')?.checked || false;
             
+            console.log(`[matchesAgingFilter] Radio states - All:${agingAll}, ≤6m:${aging6months}, >6m:${aging1year}, >1y:${aging2years}, >2y:${agingOver2years}`);
+            
             // If "All" is selected, show everything
             if (agingAll) {
                 return true;
@@ -1153,40 +1596,48 @@
             
             const ageInMonths = getStockAgeInMonths(item.lot6);
             
+            console.log(`Item ${item.itemCode} - lot6: ${item.lot6}, ageInMonths: ${ageInMonths}, latestDate: ${latestDate}`);
+            
             // If no valid date, don't filter it out (show it)
             if (ageInMonths === null) {
+                console.log(`  -> Showing (no valid date)`);
                 return true;
             }
             
             // Cumulative aging filters
             if (aging6months) {
                 // Show items 0-6 months old
-                return ageInMonths <= 6;
+                const matches = ageInMonths <= 6;
+                console.log(`  -> ≤6 months filter: ${matches} (age: ${ageInMonths})`);
+                return matches;
             }
             if (aging1year) {
                 // Show items older than 6 months (includes > 1 year and > 2 years)
-                return ageInMonths > 6;
+                const matches = ageInMonths > 6;
+                console.log(`  -> >6 months filter: ${matches} (age: ${ageInMonths})`);
+                return matches;
             }
             if (aging2years) {
                 // Show items older than 1 year (includes > 2 years)
-                return ageInMonths > 12;
+                const matches = ageInMonths > 12;
                 console.log(`  -> >1 year filter: ${matches} (age: ${ageInMonths})`);
+                return matches;
             }
             if (agingOver2years) {
                 // Show items older than 2 years
-                return ageInMonths > 24;
+                const matches = ageInMonths > 24;
+                console.log(`  -> >2 years filter: ${matches} (age: ${ageInMonths})`);
+                return matches;
             }
             
+            console.log(`  -> NO FILTER MATCHED - returning false`);
             return false;
         }
 
         function applyFilter() {
-            // Check if data is loaded
-            if (!RACK_DATA) {
-                return;
-            }
-            
+            console.log('=== applyFilter called ===');
             const showAllCustomers = selectedCustomers.size === 0;
+            console.log('Show all customers:', showAllCustomers);
             
             let totalCells = 0;
             let filteredOutCells = 0;
@@ -1208,6 +1659,8 @@
                     // Check aging filter
                     const matchesAging = matchesAgingFilter(item);
                     
+                    console.log(`  Location ${location}: customer=${matchesCustomer}, aging=${matchesAging}, both=${matchesCustomer && matchesAging}`);
+                    
                     // Item must match both filters
                     return matchesCustomer && matchesAging;
                 });
@@ -1219,6 +1672,8 @@
                     filteredOutCells++;
                 }
             });
+            
+            console.log(`Total cells: ${totalCells}, Filtered out: ${filteredOutCells}`);
             
             // Update empty tabs after filtering
             checkAndUpdateEmptyTabs();
@@ -1708,16 +2163,6 @@
             if (currentZoom === 'fit') {
                 setZoom('fit');
             }
-        });
-
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('searchInput').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    searchLocation();
-                }
-            });
-            
-            loadData();
         });
     </script>
 </body>
