@@ -1724,22 +1724,118 @@
                     return;
                 }
                 
-                // Check if any item in the cell matches both filters
-                const hasMatchingItem = cellData.items.some(item => {
+                // If showing all customers, use original first item
+                if (showAllCustomers) {
+                    cell.classList.remove('filtered-out');
+                    
+                    // Reset to original first item
+                    const firstItem = cellData.items[0];
+                    
+                    // Reset background color
+                    if (RACK_DATA.ownerColors[firstItem.ownerName]) {
+                        cell.style.backgroundColor = RACK_DATA.ownerColors[firstItem.ownerName];
+                    }
+                    
+                    // Reset owner name display
+                    const ownerDiv = cell.querySelector('.cell-owner');
+                    if (ownerDiv) {
+                        ownerDiv.textContent = firstItem.ownerName.substring(0, 20);
+                        ownerDiv.title = firstItem.ownerName;
+                    }
+                    
+                    // Reset item code display
+                    const itemDivs = cell.querySelectorAll('.cell-item');
+                    if (itemDivs[0]) {
+                        itemDivs[0].textContent = firstItem.itemCode;
+                    }
+                    
+                    // Reset item name display
+                    if (itemDivs[1]) {
+                        itemDivs[1].textContent = firstItem.itemName.substring(0, 15) + (firstItem.itemName.length > 15 ? '...' : '');
+                    }
+                    
+                    // Reset quantity display
+                    const qtyDiv = cell.querySelector('.cell-qty');
+                    if (qtyDiv) {
+                        qtyDiv.textContent = `${firstItem.stockQty || firstItem.qty} ${firstItem.uom}`;
+                    }
+                    
+                    // Reset badge to show total items count
+                    let badge = cell.querySelector('.cell-badge');
+                    if (cellData.items.length > 1) {
+                        if (!badge) {
+                            badge = document.createElement('div');
+                            badge.className = 'cell-badge';
+                            cell.appendChild(badge);
+                        }
+                        badge.textContent = cellData.items.length;
+                        badge.title = `${cellData.items.length} items`;
+                    } else if (badge) {
+                        badge.remove();
+                    }
+                    return;
+                }
+                
+                // Find items that match both filters
+                const matchingItems = cellData.items.filter(item => {
                     // Check customer filter
                     const matchesCustomer = showAllCustomers || selectedCustomers.has(item.ownerName);
                     
                     // Check aging filter
                     const matchesAging = matchesAgingFilter(item);
                     
-                    console.log(`  Location ${location}: customer=${matchesCustomer}, aging=${matchesAging}, both=${matchesCustomer && matchesAging}`);
-                    
                     // Item must match both filters
                     return matchesCustomer && matchesAging;
                 });
                 
-                if (hasMatchingItem) {
+                if (matchingItems.length > 0) {
                     cell.classList.remove('filtered-out');
+                    
+                    // Update cell display to show the first matching item
+                    const firstMatchingItem = matchingItems[0];
+                    
+                    // Update background color
+                    if (RACK_DATA.ownerColors[firstMatchingItem.ownerName]) {
+                        cell.style.backgroundColor = RACK_DATA.ownerColors[firstMatchingItem.ownerName];
+                    }
+                    
+                    // Update owner name display
+                    const ownerDiv = cell.querySelector('.cell-owner');
+                    if (ownerDiv) {
+                        ownerDiv.textContent = firstMatchingItem.ownerName.substring(0, 20);
+                        ownerDiv.title = firstMatchingItem.ownerName;
+                    }
+                    
+                    // Update item code display
+                    const itemDivs = cell.querySelectorAll('.cell-item');
+                    if (itemDivs[0]) {
+                        itemDivs[0].textContent = firstMatchingItem.itemCode;
+                    }
+                    
+                    // Update item name display
+                    if (itemDivs[1]) {
+                        itemDivs[1].textContent = firstMatchingItem.itemName.substring(0, 15) + (firstMatchingItem.itemName.length > 15 ? '...' : '');
+                    }
+                    
+                    // Update quantity display
+                    const qtyDiv = cell.querySelector('.cell-qty');
+                    if (qtyDiv) {
+                        qtyDiv.textContent = `${firstMatchingItem.stockQty || firstMatchingItem.qty} ${firstMatchingItem.uom}`;
+                    }
+                    
+                    // Update badge to show matching items count
+                    let badge = cell.querySelector('.cell-badge');
+                    if (matchingItems.length > 1) {
+                        if (!badge) {
+                            badge = document.createElement('div');
+                            badge.className = 'cell-badge';
+                            cell.appendChild(badge);
+                        }
+                        badge.textContent = matchingItems.length;
+                        badge.title = `${matchingItems.length} matching items`;
+                    } else if (badge) {
+                        badge.remove();
+                    }
                 } else {
                     cell.classList.add('filtered-out');
                     filteredOutCells++;
