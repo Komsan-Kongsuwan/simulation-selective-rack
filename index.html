@@ -1395,6 +1395,9 @@
                 const sheetData = sheets[zoneName];
                 const zoneData = { matrix: [] };
                 
+                // Track seen locations to avoid duplicates within the same sheet
+                const seenLocations = new Set();
+                
                 // The sheet is already a grid - each row is a level, each column is a bay
                 // Column headers contain location IDs
                 const headers = sheetData[0]; // First row = column headers with location IDs
@@ -1418,9 +1421,19 @@
                         }
                         
                         if (location && location.toString().trim()) {
+                            const locationStr = location.toString().trim();
+                            
+                            // Skip if we've already seen this location in this sheet
+                            if (seenLocations.has(locationStr)) {
+                                console.log(`Skipping duplicate location: ${locationStr} in zone ${zoneName}`);
+                                row.push(null);
+                                continue;
+                            }
+                            
+                            seenLocations.add(locationStr);
                             rackData.totalLocations++;
                             
-                            const items = stockByLocation[location] || [];
+                            const items = stockByLocation[locationStr] || [];
                             const occupied = items.length > 0;
                             
                             if (occupied) {
@@ -1428,7 +1441,7 @@
                             }
                             
                             row.push({
-                                location: location,
+                                location: locationStr,
                                 occupied: occupied,
                                 items: items
                             });
