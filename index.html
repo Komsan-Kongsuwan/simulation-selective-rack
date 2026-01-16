@@ -1260,9 +1260,16 @@
                     try {
                         const data = new Uint8Array(e.target.result);
                         const workbook = XLSX.read(data, { type: 'array' });
-                        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-                        resolve(jsonData);
+                        
+                        // Read all sheets
+                        const allSheets = {};
+                        workbook.SheetNames.forEach(sheetName => {
+                            const sheet = workbook.Sheets[sheetName];
+                            const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                            allSheets[sheetName] = jsonData;
+                        });
+                        
+                        resolve({ sheets: allSheets, sheetNames: workbook.SheetNames });
                     } catch (error) {
                         reject(error);
                     }
@@ -1331,83 +1338,73 @@
 
             const rackData = {
                 zones: {},
-                zoneOrder: [], // Preserve Excel column order
+                zoneOrder: [],
                 totalLocations: 0,
                 occupiedLocations: 0,
                 ownerColors: ownerColors,
                 latestDate: maxDate ? formatDateToDDMMYYYY(maxDate) : null
             };
 
-            // Standard Excel format: Zone columns with Location IDs
-            // Location ID format: {Zone}-{Level}-{Bay} (e.g., A-1-1, NN-2-12, Z5-6-21)
-            const headers = excelData[0]; // Zone names
+            // Process Excel data - each sheet is a zone with grid layout
+            const sheets = excelData.sheets;
+            const sheetNames = excelData.sheetNames;
 
-            headers.forEach((zoneName, colIndex) => {
-                // Store zone order as it appears in Excel
+            sheetNames.forEach(zoneName => {
+                // Skip empty sheets
+                if (!sheets[zoneName] || sheets[zoneName].length === 0) {
+                    return;
+                }
+                
                 rackData.zoneOrder.push(zoneName);
                 
+                const sheetData = sheets[zoneName];
                 const zoneData = { matrix: [] };
-                const rackDict = {};
-
-                // Get all locations in this column (skip header row)
-                for (let rowIndex = 1; rowIndex < excelData.length; rowIndex++) {
-                    const location = excelData[rowIndex][colIndex];
-                    if (location && location.trim()) {
-                        try {
-                            // Parse format: {Zone}-{Level}-{Bay}
-                            const parts = location.split('-');
-                            if (parts.length >= 3) {
-                                const level = parseInt(parts[1]);
-                                const bay = parseInt(parts[2]);
-                                
-                                if (!isNaN(level) && !isNaN(bay)) {
-                                    if (!rackDict[level]) {
-                                        rackDict[level] = {};
-                                    }
-                                    rackDict[level][bay] = location;
-                                }
+                
+                // The sheet is already a grid - each row is a level, each column is a bay
+                // Column headers contain location IDs
+                const headers = sheetData[0]; // First row = column headers with location IDs
+                
+                // Build matrix directly from the grid
+                // Rows = levels (top to bottom in descending order)
+                // Columns = bays (left to right)
+                
+                for (let rowIndex = 0; rowIndex < sheetData.length; rowIndex++) {
+                    const row = [];
+                    
+                    for (let colIndex = 0; colIndex < headers.length; colIndex++) {
+                        let location;
+                        
+                        if (rowIndex === 0) {
+                            // First row - use headers
+                            location = headers[colIndex];
+                        } else {
+                            // Other rows - use cell value
+                            location = sheetData[rowIndex][colIndex];
+                        }
+                        
+                        if (location && location.toString().trim()) {
+                            rackData.totalLocations++;
+                            
+                            const items = stockByLocation[location] || [];
+                            const occupied = items.length > 0;
+                            
+                            if (occupied) {
+                                rackData.occupiedLocations++;
                             }
-                        } catch (e) {
-                            // Skip invalid locations
+                            
+                            row.push({
+                                location: location,
+                                occupied: occupied,
+                                items: items
+                            });
+                        } else {
+                            row.push(null);
                         }
                     }
+                    
+                    zoneData.matrix.push(row);
                 }
-
-                // Build matrix
-                if (Object.keys(rackDict).length > 0) {
-                    const maxLevel = Math.max(...Object.keys(rackDict).map(Number));
-                    const maxBay = Math.max(...Object.values(rackDict).map(levelData => 
-                        Math.max(...Object.keys(levelData).map(Number))
-                    ));
-
-                    // Create matrix (top level first)
-                    for (let level = maxLevel; level >= 1; level--) {
-                        const row = [];
-                        for (let bay = 1; bay <= maxBay; bay++) {
-                            if (rackDict[level] && rackDict[level][bay]) {
-                                const location = rackDict[level][bay];
-                                rackData.totalLocations++;
-
-                                const items = stockByLocation[location] || [];
-                                const occupied = items.length > 0;
-
-                                if (occupied) {
-                                    rackData.occupiedLocations++;
-                                }
-
-                                row.push({
-                                    location: location,
-                                    occupied: occupied,
-                                    items: items
-                                });
-                            } else {
-                                row.push(null);
-                            }
-                        }
-                        zoneData.matrix.push(row);
-                    }
-                }
-
+                
                 rackData.zones[zoneName] = zoneData;
             });
 
