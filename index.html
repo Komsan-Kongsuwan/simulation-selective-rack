@@ -601,34 +601,34 @@
 
         .zone-summary {
             margin: 20px 0 0 55px;
-            padding: 8px 20px;
+            padding: 10px 20px;
             background: linear-gradient(135deg, #e8f0fe 0%, #f3e8ff 100%);
             border: 1px solid #d1d9e6;
             border-radius: 8px;
             display: inline-flex;
-            justify-content: center;
+            justify-content: space-around;
             align-items: center;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            min-width: 150px;
+            max-width: 600px;
         }
 
         .zone-summary-item {
             text-align: center;
             color: #495057;
-            padding: 0 10px;
+            padding: 0 12px;
         }
 
         .zone-summary-label {
             font-size: 0.7em;
             opacity: 0.8;
-            margin-bottom: 2px;
+            margin-bottom: 3px;
             font-weight: 500;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
         .zone-summary-value {
-            font-size: 1.3em;
+            font-size: 1.4em;
             font-weight: bold;
             color: #667eea;
         }
@@ -2022,6 +2022,18 @@
                 const zoneSummary = document.createElement('div');
                 zoneSummary.className = 'zone-summary';
                 zoneSummary.innerHTML = `
+                    <div class="zone-summary-item">
+                        <div class="zone-summary-label">Total Locations</div>
+                        <div class="zone-summary-value">${zoneTotal.toLocaleString()}</div>
+                    </div>
+                    <div class="zone-summary-item">
+                        <div class="zone-summary-label">Occupied</div>
+                        <div class="zone-summary-value">${zoneOccupied.toLocaleString()}</div>
+                    </div>
+                    <div class="zone-summary-item">
+                        <div class="zone-summary-label">Empty</div>
+                        <div class="zone-summary-value">${(zoneTotal - zoneOccupied).toLocaleString()}</div>
+                    </div>
                     <div class="zone-summary-item">
                         <div class="zone-summary-label">Occupancy Rate</div>
                         <div class="zone-summary-value">${zoneOccupancyRate}%</div>
