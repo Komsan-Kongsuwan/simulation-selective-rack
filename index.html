@@ -1964,49 +1964,6 @@
             currentZoom = zoomLevel;
         }
 
-        function extractLevelFromLocation(location) {
-            // Handle three different location ID patterns:
-            // 1. ST9 format: {Zone}-{Level}-{Bay} (e.g., A-7-1)
-            // 2. TBN format: {Zone}-{Bay}-{Level} (e.g., AA-01-05)
-            // 3. BPA format: {Zone}{Bay}-{Level} (e.g., A09-09)
-            
-            const parts = location.split('-');
-            
-            if (parts.length === 3) {
-                // Could be ST9 (Zone-Level-Bay) or TBN (Zone-Bay-Level)
-                // ST9: Zone is 1-2 chars (A, AA, etc.), Level is in middle position
-                // TBN: Zone is 1-2 chars (A, AA, etc.), Level is in last position
-                
-                const zone = parts[0];
-                const middle = parts[1];
-                const last = parts[2];
-                
-                // If zone is only letters (no numbers), then it's ST9 format
-                if (/^[A-Z]+$/.test(zone)) {
-                    // ST9: A-7-1 → Level is middle (7)
-                    const level = parseInt(middle);
-                    if (!isNaN(level) && level >= 1) {
-                        return level;
-                    }
-                } else {
-                    // TBN: AA-01-05 → Level is last (05)
-                    const level = parseInt(last);
-                    if (!isNaN(level) && level >= 1) {
-                        return level;
-                    }
-                }
-            } else if (parts.length === 2) {
-                // BPA format: {Zone}{Bay}-{Level} (e.g., A09-09)
-                // Level is in the last position
-                const level = parseInt(parts[1]);
-                if (!isNaN(level) && level >= 1) {
-                    return level;
-                }
-            }
-            
-            return null;
-        }
-
         function displayTabs() {
             const tabsContainer = document.getElementById('tabs');
             const zoneContents = document.getElementById('zoneContents');
@@ -2040,19 +1997,10 @@
                     const rowDiv = document.createElement('div');
                     rowDiv.className = 'rack-row';
                     
-                    // Extract level number from first cell in the row
-                    let levelNumber = null;
-                    for (const cell of row) {
-                        if (cell && cell.location) {
-                            levelNumber = extractLevelFromLocation(cell.location);
-                            if (levelNumber) break;
-                        }
-                    }
-                    
-                    // Fallback: calculate from row index if we couldn't extract from location
-                    if (!levelNumber) {
-                        levelNumber = zoneData.matrix.length - rowIndex;
-                    }
+                    // Simple sequential numbering from bottom to top
+                    // Row 0 = Top level (highest number)
+                    // Last row = Level 1 (bottom)
+                    const levelNumber = zoneData.matrix.length - rowIndex;
                     
                     const rowLabel = document.createElement('div');
                     rowLabel.className = 'row-label';
