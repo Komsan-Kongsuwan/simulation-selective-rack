@@ -1736,58 +1736,6 @@
                     return;
                 }
                 
-                // If showing all customers, use original first item
-                if (showAllCustomers) {
-                    cell.classList.remove('filtered-out');
-                    
-                    // Reset to original first item
-                    const firstItem = cellData.items[0];
-                    
-                    // Reset background color
-                    if (RACK_DATA.ownerColors[firstItem.ownerName]) {
-                        cell.style.backgroundColor = RACK_DATA.ownerColors[firstItem.ownerName];
-                    }
-                    
-                    // Reset owner name display
-                    const ownerDiv = cell.querySelector('.cell-owner');
-                    if (ownerDiv) {
-                        ownerDiv.textContent = firstItem.ownerName.substring(0, 20);
-                        ownerDiv.title = firstItem.ownerName;
-                    }
-                    
-                    // Reset item code display
-                    const itemDivs = cell.querySelectorAll('.cell-item');
-                    if (itemDivs[0]) {
-                        itemDivs[0].textContent = firstItem.itemCode;
-                    }
-                    
-                    // Reset item name display
-                    if (itemDivs[1]) {
-                        itemDivs[1].textContent = firstItem.itemName.substring(0, 15) + (firstItem.itemName.length > 15 ? '...' : '');
-                    }
-                    
-                    // Reset quantity display
-                    const qtyDiv = cell.querySelector('.cell-qty');
-                    if (qtyDiv) {
-                        qtyDiv.textContent = `${firstItem.stockQty || firstItem.qty} ${firstItem.uom}`;
-                    }
-                    
-                    // Reset badge to show total items count
-                    let badge = cell.querySelector('.cell-badge');
-                    if (cellData.items.length > 1) {
-                        if (!badge) {
-                            badge = document.createElement('div');
-                            badge.className = 'cell-badge';
-                            cell.appendChild(badge);
-                        }
-                        badge.textContent = cellData.items.length;
-                        badge.title = `${cellData.items.length} items`;
-                    } else if (badge) {
-                        badge.remove();
-                    }
-                    return;
-                }
-                
                 // Find items that match both filters
                 const matchingItems = cellData.items.filter(item => {
                     // Check customer filter
