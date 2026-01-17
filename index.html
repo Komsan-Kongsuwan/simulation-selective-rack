@@ -600,7 +600,7 @@
         }
 
         .zone-summary {
-            margin: 20px auto 0 auto;
+            margin: 20px 0 0 55px;
             padding: 12px 20px;
             background: linear-gradient(135deg, #e8f0fe 0%, #f3e8ff 100%);
             border: 1px solid #d1d9e6;
@@ -2007,8 +2007,6 @@
                     matrix.appendChild(rowDiv);
                 });
                 
-                zoneDiv.appendChild(matrix);
-                
                 // Calculate zone statistics
                 let zoneTotal = 0;
                 let zoneOccupied = 0;
@@ -2026,12 +2024,7 @@
                 
                 const zoneOccupancyRate = zoneTotal > 0 ? ((zoneOccupied / zoneTotal) * 100).toFixed(1) : 0;
                 
-                // Create zone summary container (centered)
-                const summaryContainer = document.createElement('div');
-                summaryContainer.style.textAlign = 'center';
-                summaryContainer.style.marginTop = '20px';
-                
-                // Create zone summary
+                // Create zone summary (inside matrix so it follows zoom)
                 const zoneSummary = document.createElement('div');
                 zoneSummary.className = 'zone-summary';
                 zoneSummary.innerHTML = `
@@ -2054,8 +2047,10 @@
                     </div>
                 `;
                 
-                summaryContainer.appendChild(zoneSummary);
-                zoneDiv.appendChild(summaryContainer);
+                // Add summary to matrix (so it zooms together)
+                matrix.appendChild(zoneSummary);
+                
+                zoneDiv.appendChild(matrix);
                 zoneContents.appendChild(zoneDiv);
             });
             
