@@ -1871,11 +1871,25 @@
                 const zoneSummary = document.querySelector(`#zone-${zoneName} .zone-summary`);
                 if (!zoneSummary) return;
                 
+                // Get all cells in this zone from RACK_DATA
+                const zoneData = RACK_DATA.zones[zoneName];
+                if (!zoneData) return;
+                
+                // Collect all location IDs in this zone
+                const zoneLocationIds = new Set();
+                zoneData.matrix.forEach(row => {
+                    row.forEach(cell => {
+                        if (cell && cell.location) {
+                            zoneLocationIds.add(cell.location);
+                        }
+                    });
+                });
+                
                 // Count visible occupied cells in this zone
                 let visibleOccupied = 0;
                 allCells.forEach((cell, location) => {
                     // Check if this cell belongs to this zone
-                    if (location.startsWith(zoneName + '-')) {
+                    if (zoneLocationIds.has(location)) {
                         const isVisible = !cell.classList.contains('filtered-out');
                         const cellData = findCellData(location);
                         if (isVisible && cellData && cellData.occupied) {
