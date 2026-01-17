@@ -1856,8 +1856,41 @@
             
             console.log(`Total cells: ${totalCells}, Filtered out: ${filteredOutCells}`);
             
+            // Update summary visibility for each zone
+            updateSummaryVisibility();
+            
             // Update empty tabs after filtering
             checkAndUpdateEmptyTabs();
+        }
+
+        function updateSummaryVisibility() {
+            // Check each zone and hide/show summary based on visible occupied cells
+            const zoneNames = RACK_DATA.zoneOrder || Object.keys(RACK_DATA.zones);
+            
+            zoneNames.forEach(zoneName => {
+                const zoneSummary = document.querySelector(`#zone-${zoneName} .zone-summary`);
+                if (!zoneSummary) return;
+                
+                // Count visible occupied cells in this zone
+                let visibleOccupied = 0;
+                allCells.forEach((cell, location) => {
+                    // Check if this cell belongs to this zone
+                    if (location.startsWith(zoneName + '-')) {
+                        const isVisible = !cell.classList.contains('filtered-out');
+                        const cellData = findCellData(location);
+                        if (isVisible && cellData && cellData.occupied) {
+                            visibleOccupied++;
+                        }
+                    }
+                });
+                
+                // Show summary only if there are visible occupied cells
+                if (visibleOccupied > 0) {
+                    zoneSummary.style.display = 'inline-flex';
+                } else {
+                    zoneSummary.style.display = 'none';
+                }
+            });
         }
 
         function findCellData(location) {
@@ -2018,30 +2051,32 @@
                 
                 const zoneOccupancyRate = zoneTotal > 0 ? ((zoneOccupied / zoneTotal) * 100).toFixed(1) : 0;
                 
-                // Create zone summary (inside matrix so it follows zoom)
-                const zoneSummary = document.createElement('div');
-                zoneSummary.className = 'zone-summary';
-                zoneSummary.innerHTML = `
-                    <div class="zone-summary-item">
-                        <div class="zone-summary-label">Total Locations</div>
-                        <div class="zone-summary-value">${zoneTotal.toLocaleString()}</div>
-                    </div>
-                    <div class="zone-summary-item">
-                        <div class="zone-summary-label">Occupied</div>
-                        <div class="zone-summary-value">${zoneOccupied.toLocaleString()}</div>
-                    </div>
-                    <div class="zone-summary-item">
-                        <div class="zone-summary-label">Empty</div>
-                        <div class="zone-summary-value">${(zoneTotal - zoneOccupied).toLocaleString()}</div>
-                    </div>
-                    <div class="zone-summary-item">
-                        <div class="zone-summary-label">Occupancy Rate</div>
-                        <div class="zone-summary-value">${zoneOccupancyRate}%</div>
-                    </div>
-                `;
-                
-                // Add summary to matrix (so it zooms together)
-                matrix.appendChild(zoneSummary);
+                // Only create summary if there are occupied locations
+                if (zoneOccupied > 0) {
+                    const zoneSummary = document.createElement('div');
+                    zoneSummary.className = 'zone-summary';
+                    zoneSummary.innerHTML = `
+                        <div class="zone-summary-item">
+                            <div class="zone-summary-label">Total Locations</div>
+                            <div class="zone-summary-value">${zoneTotal.toLocaleString()}</div>
+                        </div>
+                        <div class="zone-summary-item">
+                            <div class="zone-summary-label">Occupied</div>
+                            <div class="zone-summary-value">${zoneOccupied.toLocaleString()}</div>
+                        </div>
+                        <div class="zone-summary-item">
+                            <div class="zone-summary-label">Empty</div>
+                            <div class="zone-summary-value">${(zoneTotal - zoneOccupied).toLocaleString()}</div>
+                        </div>
+                        <div class="zone-summary-item">
+                            <div class="zone-summary-label">Occupancy Rate</div>
+                            <div class="zone-summary-value">${zoneOccupancyRate}%</div>
+                        </div>
+                    `;
+                    
+                    // Add summary to matrix (so it zooms together)
+                    matrix.appendChild(zoneSummary);
+                }
                 
                 zoneDiv.appendChild(matrix);
                 zoneContents.appendChild(zoneDiv);
