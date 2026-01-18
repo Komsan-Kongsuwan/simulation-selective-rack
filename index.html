@@ -1337,8 +1337,10 @@
                         stockByLocation[location] = [];
                     }
                     
-                    const lot6 = row['Lot6'];
+                    const lot1 = row['Lot1'];
                     const lot2 = row['Lot2'];
+                    const lot3 = row['Lot3'];
+                    const lot6 = row['Lot6'];
                     const damageFlag = row['Damage Flag'];
                     
                     if (lot6) {
@@ -1355,8 +1357,10 @@
                         itemName: row['Item Name'] || '',
                         stockQty: parseFloat(row['StockQty[Unit1]']) || 0,
                         uom: row['UOM1'] || '',
-                        lot6: lot6 || '',
+                        lot1: lot1 || '',
                         lot2: lot2 || '',
+                        lot3: lot3 || '',
+                        lot6: lot6 || '',
                         damageFlag: damageFlag || ''
                     });
                 }
@@ -2141,16 +2145,28 @@
                                     <span class="info-label">Quantity</span>
                                     <span class="info-value">${item.stockQty || item.qty} ${item.uom}</span>
                                 </div>
-                                ${item.lot6 ? `
+                                ${item.lot1 ? `
                                 <div class="info-row">
-                                    <span class="info-label">Lot6 (Date)</span>
-                                    <span class="info-value">${item.lot6}</span>
+                                    <span class="info-label">Lot1</span>
+                                    <span class="info-value">${item.lot1}</span>
                                 </div>
                                 ` : ''}
                                 ${item.lot2 ? `
                                 <div class="info-row">
                                     <span class="info-label">Lot2</span>
                                     <span class="info-value">${item.lot2}</span>
+                                </div>
+                                ` : ''}
+                                ${item.lot3 ? `
+                                <div class="info-row">
+                                    <span class="info-label">Lot3</span>
+                                    <span class="info-value">${item.lot3}</span>
+                                </div>
+                                ` : ''}
+                                ${item.lot6 ? `
+                                <div class="info-row">
+                                    <span class="info-label">Receive Date</span>
+                                    <span class="info-value">${item.lot6}</span>
                                 </div>
                                 ` : ''}
                                 ${item.damageFlag ? `
